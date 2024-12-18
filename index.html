@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>htaccess Redirect Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #output {
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .copy-btn {
+            background: #2196F3;
+        }
+        .copy-btn:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>htaccess Redirect Generator</h1>
+    
+    <div class="container">
+        <h2>Upload CSV</h2>
+        <p>Upload a CSV file with "Old Path" and "New Path" columns to generate htaccess redirects.</p>
+        <input type="file" id="csvFile" accept=".csv">
+        <button onclick="processCSV()">Generate Redirects</button>
+    </div>
+
+    <div class="container">
+        <h2>Generated htaccess Rules</h2>
+        <button class="copy-btn" onclick="copyToClipboard()">Copy to Clipboard</button>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function processCSV() {
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) {
+                alert('Please select a CSV file first.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const csvContent = event.target.result;
+                const lines = csvContent.split('\n');
+                
+                // Find header row and column indices
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                const oldPathIndex = headers.indexOf('old path');
+                const newPathIndex = headers.indexOf('new path');
+                
+                if (oldPathIndex === -1 || newPathIndex === -1) {
+                    alert('CSV must contain "Old Path" and "New Path" columns');
+                    return;
+                }
+
+                let htaccessContent = 'RewriteEngine on\n\n';
+                htaccessContent += '# Redirect root of shop.govirtualoffice.com to the main site\n';
+                htaccessContent += 'RewriteCond %{HTTP_HOST} ^shop\\.govirtualoffice\\.com$ [OR]\n';
+                htaccessContent += 'RewriteCond %{HTTP_HOST} ^www\\.shop\\.govirtualoffice\\.com$\n';
+                htaccessContent += 'RewriteRule ^/?$ "https://govirtualoffice.com/" [R=301,L]\n\n';
+
+                // Process each line
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;  // Skip empty lines
+                    
+                    const columns = line.split(',').map(col => col.trim());
+                    let oldPath = columns[oldPathIndex];
+                    let newPath = columns[newPathIndex];
+                    
+                    if (!oldPath || !newPath) continue;  // Skip if either path is empty
+
+                    // Clean up the paths
+                    oldPath = oldPath.replace(/^https?:\/\/[^\/]+\//, ''); // Remove domain and protocol
+                    oldPath = oldPath.replace(/^\/+|\/+$/g, ''); // Remove leading/trailing slashes
+                    
+                    // Escape special characters for RewriteRule pattern
+                    const escapedOldPath = oldPath.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+                    
+                    htaccessContent += `# Redirect for ${oldPath}\n`;
+                    htaccessContent += 'RewriteCond %{HTTP_HOST} ^shop\\.govirtualoffice\\.com$ [OR]\n';
+                    htaccessContent += 'RewriteCond %{HTTP_HOST} ^www\\.shop\\.govirtualoffice\\.com$\n';
+                    htaccessContent += `RewriteRule ^${escapedOldPath}$ "${newPath}" [R=301,L]\n\n`;
+                }
+
+                document.getElementById('output').textContent = htaccessContent;
+            };
+            reader.readAsText(file);
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output');
+            const text = output.textContent;
+            
+            if (!text) {
+                alert('Generate redirects first!');
+                return;
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+    </script>
+</body>
+</html>
