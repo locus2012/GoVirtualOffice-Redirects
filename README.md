@@ -2,6 +2,8 @@
 
 A simple web-based tool to generate Apache htaccess redirects from a CSV file. Created by Abe Rubarts at Locus Digital.
 
+![htaccess Redirect Generator Screenshot](screenshot.png)
+
 ## Features
 
 - Upload CSV with "Old Path" and "New Path" columns
